@@ -35,3 +35,20 @@ func StringToInt(s string) int {
 
 	return i
 }
+
+// CleanUpAndConvertIntArray first clears the array from empty strings
+// and then converts all elements to integers.
+func CleanUpAndConvertIntArray(s []string) []int {
+	nums := make([]int, 0)
+
+	for _, str := range s {
+		trimmedStr := strings.Trim(str, " ")
+		if trimmedStr == "" {
+			continue
+		}
+
+		nums = append(nums, StringToInt(trimmedStr))
+	}
+
+	return nums
+}
