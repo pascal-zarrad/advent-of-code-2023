@@ -10,6 +10,8 @@ import (
 
 const day = "07"
 
+////////// COMMON
+
 type HandType int
 
 const (
@@ -33,22 +35,6 @@ var cardWeightMappingPart1 = map[rune]rune{
 	'9': '9',
 	'T': 'A',
 	'J': 'B',
-	'Q': 'C',
-	'K': 'D',
-	'A': 'E',
-}
-
-var cardWeightMappingPart2 = map[rune]rune{
-	'2': '2',
-	'3': '3',
-	'4': '4',
-	'5': '5',
-	'6': '6',
-	'7': '7',
-	'8': '8',
-	'9': '9',
-	'T': 'A',
-	'J': '1',
 	'Q': 'C',
 	'K': 'D',
 	'A': 'E',
@@ -92,7 +78,33 @@ func calculateCardCounts(hand string) map[rune]int {
 	return cardCounts
 }
 
-func findHandType(camelCardsHand *CamelCardsHand) HandType {
+func main() {
+	input := util.ReadInput(day)
+
+	util.PrintResult(1, solvePartOne(input))
+	util.PrintResult(2, solvePartTwo(input))
+}
+
+////////// PART 1
+
+func solvePartOne(input string) string {
+	rounds := strings.Split(input, "\n")
+
+	camelCardsHand := convertRoundsToHands(rounds)
+	sum := 0
+
+	// Two-step process is easier than doing a multi-condition sort
+	// Additionally, no need
+	rankedHands := rankHandsPart1(camelCardsHand)
+
+	for rank, hand := range rankedHands {
+		sum += (rank + 1) * hand.bid
+	}
+
+	return fmt.Sprint(sum)
+}
+
+func findHandTypePart1(camelCardsHand *CamelCardsHand) HandType {
 	cardCounts := calculateCardCounts(camelCardsHand.cards)
 
 	switch len(cardCounts) {
@@ -123,61 +135,56 @@ func findHandType(camelCardsHand *CamelCardsHand) HandType {
 	panic("Got invalid hand!")
 }
 
-func rankHands(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
-	hands := map[HandType][]*CamelCardsHand{}
-
+func prepareHandPart1(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
 	for _, hand := range camelCardsHands {
-		handType := findHandType(hand)
+		hand.handType = findHandTypePart1(hand)
 
 		weightCards := []rune(hand.cards)
 		for i := 0; i < len(weightCards); i++ {
 			weightCards[i] = cardWeightMappingPart1[weightCards[i]]
 		}
 		hand.weightCards = string(weightCards)
-
-		handsByType, ok := hands[handType]
-		if !ok {
-			handsByType = make([]*CamelCardsHand, 0)
-		}
-
-		hands[handType] = append(handsByType, hand)
 	}
 
-	for _, typedHands := range hands {
-		// Order by hand type
-		sort.Slice(typedHands, func(i, j int) bool {
-			if typedHands[i].handType == 0 {
-				typedHands[i].handType = findHandType(typedHands[i])
-			}
-
-			if typedHands[j].handType == 0 {
-				typedHands[j].handType = findHandType(typedHands[j])
-			}
-
-			if camelCardsHands[i].handType < camelCardsHands[j].handType {
-				return true
-			}
-
-			return false
-		})
-	}
-
-	for _, typedHands := range hands {
-		// Order by hand type
-		sort.Slice(typedHands, func(i, j int) bool {
-			return typedHands[i].weightCards < typedHands[j].weightCards
-		})
-	}
-
-	sortedHands := make([]*CamelCardsHand, 0)
-	for i := 1; i <= 7; i++ {
-		sortedHands = append(sortedHands, hands[HandType(i)]...)
-	}
-
-	return sortedHands
+	return camelCardsHands
 }
 
-func solvePartOne(input string) string {
+func rankHandsPart1(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
+	camelCardsHands = prepareHandPart1(camelCardsHands)
+
+	sort.Slice(camelCardsHands, func(i, j int) bool {
+		if camelCardsHands[i].handType < camelCardsHands[j].handType {
+			return true
+		}
+
+		if camelCardsHands[i].handType > camelCardsHands[j].handType {
+			return false
+		}
+		return camelCardsHands[i].weightCards < camelCardsHands[j].weightCards
+	})
+
+	return camelCardsHands
+}
+
+////////// PART 2
+
+var cardWeightMappingPart2 = map[rune]rune{
+	'2': '2',
+	'3': '3',
+	'4': '4',
+	'5': '5',
+	'6': '6',
+	'7': '7',
+	'8': '8',
+	'9': '9',
+	'T': 'A',
+	'J': '1',
+	'Q': 'C',
+	'K': 'D',
+	'A': 'E',
+}
+
+func solvePartTwo(input string) string {
 	rounds := strings.Split(input, "\n")
 
 	camelCardsHand := convertRoundsToHands(rounds)
@@ -185,7 +192,7 @@ func solvePartOne(input string) string {
 
 	// Two-step process is easier than doing a multi-condition sort
 	// Additionally, no need
-	rankedHands := rankHands(camelCardsHand)
+	rankedHands := rankHandsPart2(camelCardsHand)
 
 	for rank, hand := range rankedHands {
 		sum += (rank + 1) * hand.bid
@@ -194,19 +201,7 @@ func solvePartOne(input string) string {
 	return fmt.Sprint(sum)
 }
 
-func calculateCardCountsPart2(hand string) map[rune]int {
-	cardCounts := map[rune]int{}
-
-	for _, char := range hand {
-		if _, ok := cardCounts[char]; !ok {
-			cardCounts[char] = 1
-
-			continue
-		}
-
-		cardCounts[char]++
-	}
-
+func adjustCardCountsPart2(cardCounts map[rune]int) map[rune]int {
 	if count, ok := cardCounts['J']; ok {
 		highestChar := 'J'
 		highestCount := 0
@@ -233,7 +228,8 @@ func calculateCardCountsPart2(hand string) map[rune]int {
 }
 
 func findHandTypePart2(camelCardsHand *CamelCardsHand) HandType {
-	cardCounts := calculateCardCountsPart2(camelCardsHand.cards)
+	cardCounts := calculateCardCounts(camelCardsHand.cards)
+	cardCounts = adjustCardCountsPart2(cardCounts)
 
 	switch len(cardCounts) {
 	case 5:
@@ -263,80 +259,33 @@ func findHandTypePart2(camelCardsHand *CamelCardsHand) HandType {
 	panic("Got invalid hand!")
 }
 
-func rankHandsPart2(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
-	hands := map[HandType][]*CamelCardsHand{}
-
+func prepareHandPart2(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
 	for _, hand := range camelCardsHands {
-		handType := findHandTypePart2(hand)
+		hand.handType = findHandTypePart2(hand)
 
 		weightCards := []rune(hand.cards)
 		for i := 0; i < len(weightCards); i++ {
 			weightCards[i] = cardWeightMappingPart2[weightCards[i]]
 		}
 		hand.weightCards = string(weightCards)
+	}
 
-		handsByType, ok := hands[handType]
-		if !ok {
-			handsByType = make([]*CamelCardsHand, 0)
+	return camelCardsHands
+}
+
+func rankHandsPart2(camelCardsHands []*CamelCardsHand) []*CamelCardsHand {
+	camelCardsHands = prepareHandPart2(camelCardsHands)
+
+	sort.Slice(camelCardsHands, func(i, j int) bool {
+		if camelCardsHands[i].handType < camelCardsHands[j].handType {
+			return true
 		}
 
-		hands[handType] = append(handsByType, hand)
-	}
-
-	for _, typedHands := range hands {
-		// Order by hand type
-		sort.Slice(typedHands, func(i, j int) bool {
-			if typedHands[i].handType == 0 {
-				typedHands[i].handType = findHandTypePart2(typedHands[i])
-			}
-
-			if typedHands[j].handType == 0 {
-				typedHands[j].handType = findHandTypePart2(typedHands[j])
-			}
-
-			if camelCardsHands[i].handType < camelCardsHands[j].handType {
-				return true
-			}
-
+		if camelCardsHands[i].handType > camelCardsHands[j].handType {
 			return false
-		})
-	}
+		}
+		return camelCardsHands[i].weightCards < camelCardsHands[j].weightCards
+	})
 
-	for _, typedHands := range hands {
-		// Order by hand type
-		sort.Slice(typedHands, func(i, j int) bool {
-			return typedHands[i].weightCards < typedHands[j].weightCards
-		})
-	}
-
-	sortedHands := make([]*CamelCardsHand, 0)
-	for i := 1; i <= 7; i++ {
-		sortedHands = append(sortedHands, hands[HandType(i)]...)
-	}
-
-	return sortedHands
-}
-
-func solvePartTwo(input string) string {
-	rounds := strings.Split(input, "\n")
-
-	camelCardsHand := convertRoundsToHands(rounds)
-	sum := 0
-
-	// Two-step process is easier than doing a multi-condition sort
-	// Additionally, no need
-	rankedHands := rankHandsPart2(camelCardsHand)
-
-	for rank, hand := range rankedHands {
-		sum += (rank + 1) * hand.bid
-	}
-
-	return fmt.Sprint(sum)
-}
-
-func main() {
-	input := util.ReadInput(day)
-
-	util.PrintResult(1, solvePartOne(input))
-	util.PrintResult(2, solvePartTwo(input))
+	return camelCardsHands
 }
